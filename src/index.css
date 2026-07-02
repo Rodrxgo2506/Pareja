@@ -5,7 +5,7 @@
   --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", Georgia, Cambria, "Times New Roman", Times, serif;
   --font-romantic: "Alex Brush", cursive;
-  
+
   --color-cream: #fdfbf7;
 }
 
@@ -13,17 +13,30 @@
   .animate-fade-in {
     animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
+
   .font-romantic {
     font-family: "Alex Brush", cursive;
   }
+
   .text-glow-rose {
     text-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
   }
+
   .bg-love-gradient {
     background: linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%);
   }
+
   .bg-romantic-red {
     background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
@@ -32,6 +45,7 @@
     opacity: 0;
     transform: translateY(6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

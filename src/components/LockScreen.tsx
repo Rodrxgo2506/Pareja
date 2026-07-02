@@ -62,6 +62,27 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
     }
   };
 
+  const handleResetConfig = async () => {
+    const confirmReset = window.confirm(
+      '¿Estás seguro de que deseas restablecer este rincón?\n\n' +
+      'Esto borrará vuestros datos locales actuales en este dispositivo para que puedas crear uno nuevo o unirte con los datos de tu pareja.'
+    );
+    if (confirmReset) {
+      try {
+        await clearAllStores();
+        setIsFirstTime(true);
+        setPartnerA('');
+        setPartnerB('');
+        setStartDate('2025-01-01');
+        setPassword('');
+        setError('');
+        setSetupMode('join'); // set to join so they can easily enter the partner's key/backup
+      } catch (err) {
+        setError('Error al restablecer vuestro rincón.');
+      }
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -482,6 +503,16 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
             >
               Descifrar Recuerdos
             </button>
+
+            <div className="pt-3 border-t border-stone-100 text-center mt-2">
+              <button
+                type="button"
+                onClick={handleResetConfig}
+                className="text-[11px] text-stone-400 hover:text-rose-600 underline font-medium transition-colors cursor-pointer"
+              >
+                ¿Quieres empezar de nuevo o unirte a tu pareja?
+              </button>
+            </div>
           </form>
         </motion.div>
       )}

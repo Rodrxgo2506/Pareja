@@ -20,23 +20,37 @@ export default function Navbar({ currentTab, setTab, config, onLock }: NavbarPro
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b-2 border-rose-100 px-4 md:px-8 py-3.5 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="bg-rose-600 p-2.5 rounded-xl shadow-md shadow-rose-100 flex items-center justify-center animate-pulse">
-          <Heart className="w-5 h-5 text-white fill-white" />
+    <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b-2 border-rose-100 px-4 md:px-8 py-3.5 flex flex-col gap-3">
+      {/* Brand & Logout Row */}
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-3">
+          <div className="bg-rose-600 p-2 rounded-xl shadow-md shadow-rose-100 flex items-center justify-center animate-pulse shrink-0">
+            <Heart className="w-4.5 h-4.5 text-white fill-white" />
+          </div>
+          <div className="min-w-0">
+            <span className="font-serif text-sm md:text-base font-extrabold text-stone-900 tracking-tight leading-none block truncate">
+              {config.partnerAName} <span className="text-rose-600">♥</span> {config.partnerBName}
+            </span>
+            <span className="text-[9px] md:text-[10px] font-mono uppercase tracking-widest text-rose-500 font-semibold block mt-1 truncate">
+              Nuestro Cofre de Amor
+            </span>
+          </div>
         </div>
-        <div>
-          <span className="font-serif text-base font-extrabold text-stone-955 tracking-tight leading-none block">
-            {config.partnerAName} <span className="text-rose-600">♥</span> {config.partnerBName}
-          </span>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-rose-500 font-semibold block mt-1">
-            Nuestro Cofre de Amor
-          </span>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={onLock}
+            title="Cerrar y cifrar espacio"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white text-[11px] font-bold tracking-wide transition-all cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden xs:inline">Salir</span>
+          </button>
         </div>
       </div>
 
-      {/* Desktop Navigation */}
-      <nav className="hidden md:flex items-center gap-2">
+      {/* Horizontal navigation scrollable list of tabs, never cut off, works everywhere */}
+      <nav className="w-full overflow-x-auto scrollbar-none flex items-center gap-2 pb-0.5 -mx-4 px-4 sm:mx-0 sm:px-0 select-none">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentTab === tab.id;
@@ -44,51 +58,17 @@ export default function Navbar({ currentTab, setTab, config, onLock }: NavbarPro
             <button
               key={tab.id}
               onClick={() => setTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-sans font-bold tracking-wider uppercase transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-rose-600 text-white shadow-lg shadow-rose-200/60 scale-105'
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] sm:text-xs font-sans font-bold tracking-wider uppercase transition-all shrink-0 cursor-pointer ${isActive
+                  ? 'bg-rose-600 text-white shadow-md shadow-rose-200/60 scale-102'
                   : 'text-stone-500 hover:text-rose-600 hover:bg-rose-50/50'
-              }`}
+                }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-              {tab.label}
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+              <span>{tab.label}</span>
             </button>
           );
         })}
       </nav>
-
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onLock}
-          title="Cerrar y cifrar espacio"
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white text-xs font-semibold tracking-wide transition-all cursor-pointer"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Salir & Cifrar</span>
-        </button>
-      </div>
-
-      {/* Mobile Floating Bottom Bar */}
-      <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 bg-white/95 backdrop-blur-md border-2 border-rose-100 rounded-2xl shadow-2xl flex items-center justify-around py-3 px-2">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = currentTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setTab(tab.id)}
-              className={`flex flex-col items-center gap-1.5 p-1 px-3 rounded-xl transition-all cursor-pointer ${
-                isActive ? 'text-rose-600 scale-110 font-bold' : 'text-stone-400 hover:text-rose-400'
-              }`}
-            >
-              <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5] text-rose-600' : 'stroke-[1.8]'}`} />
-              <span className="text-[9px] font-sans tracking-wide uppercase font-bold">
-                {tab.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
     </header>
   );
 }
