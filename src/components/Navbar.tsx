@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Image, Calendar, Mail, Music, Award, LogOut } from 'lucide-react';
+import { Heart, Image, Calendar, Mail, Music, Award, LogOut, Sun, Moon } from 'lucide-react';
 import { RelationshipConfig } from '../types';
 
 interface NavbarProps {
@@ -7,9 +7,11 @@ interface NavbarProps {
   setTab: (tab: string) => void;
   config: RelationshipConfig;
   onLock: () => void;
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
-export default function Navbar({ currentTab, setTab, config, onLock }: NavbarProps) {
+export default function Navbar({ currentTab, setTab, config, onLock, isDarkMode, toggleDarkMode }: NavbarProps) {
   const tabs = [
     { id: 'dashboard', label: 'Inicio', icon: Heart },
     { id: 'gallery', label: 'Álbumes', icon: Image },
@@ -39,6 +41,14 @@ export default function Navbar({ currentTab, setTab, config, onLock }: NavbarPro
 
         <div className="flex items-center gap-2 shrink-0">
           <button
+            onClick={toggleDarkMode}
+            title={isDarkMode ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
+            className="p-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-all cursor-pointer flex items-center justify-center dark:hover:bg-rose-950/40"
+          >
+            {isDarkMode ? <Sun className="w-4 h-4 text-amber-500 fill-amber-500/20" /> : <Moon className="w-4 h-4 text-rose-600" />}
+          </button>
+
+          <button
             onClick={onLock}
             title="Cerrar y cifrar espacio"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white text-[11px] font-bold tracking-wide transition-all cursor-pointer"
@@ -59,8 +69,8 @@ export default function Navbar({ currentTab, setTab, config, onLock }: NavbarPro
               key={tab.id}
               onClick={() => setTab(tab.id)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] sm:text-xs font-sans font-bold tracking-wider uppercase transition-all shrink-0 cursor-pointer ${isActive
-                  ? 'bg-rose-600 text-white shadow-md shadow-rose-200/60 scale-102'
-                  : 'text-stone-500 hover:text-rose-600 hover:bg-rose-50/50'
+                ? 'bg-rose-600 text-white shadow-md shadow-rose-200/60 scale-102'
+                : 'text-stone-500 hover:text-rose-600 hover:bg-rose-50/50'
                 }`}
             >
               <Icon className={`w-3.5 h-3.5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />

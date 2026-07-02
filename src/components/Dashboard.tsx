@@ -44,6 +44,15 @@ export default function Dashboard({ config, passwordKey }: DashboardProps) {
   const [annDate, setAnnDate] = useState('');
   const [showAddAnn, setShowAddAnn] = useState(false);
   const [stats, setStats] = useState({ photos: 0, messages: 0, memories: 0 });
+  const [nextSpecialEvent, setNextSpecialEvent] = useState<{
+    name: string;
+    timeLeft: {
+      days: number;
+      hours: number;
+      minutes: number;
+      seconds: number;
+    };
+  } | null>(null);
   const [activeNotifications, setActiveNotifications] = useState<string[]>([]);
   const [confettiActive, setConfettiActive] = useState(false);
 
@@ -254,12 +263,62 @@ export default function Dashboard({ config, passwordKey }: DashboardProps) {
         seconds,
         totalDays,
       });
+
+      // Calculate countdown to next special event
+      const events: { name: string; targetDate: Date }[] = [];
+
+      // 1. Next Annual Anniversary
+      let nextAnnDate = new Date(now.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0);
+      if (nextAnnDate.getTime() <= now.getTime()) {
+        nextAnnDate.setFullYear(nextAnnDate.getFullYear() + 1);
+      }
+      events.push({ name: 'Aniversario Anual 🎉', targetDate: nextAnnDate });
+
+      // 2. Next Monthly Anniversary
+      let nextMonthDate = new Date(now.getFullYear(), now.getMonth(), start.getDate(), 0, 0, 0);
+      if (nextMonthDate.getTime() <= now.getTime()) {
+        nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+      }
+      events.push({ name: 'Mesiversario Mensual 🌸', targetDate: nextMonthDate });
+
+      // 3. Custom Anniversaries
+      customAnns.forEach((ann) => {
+        const annObj = new Date(ann.date + 'T00:00:00');
+        let nextCustDate = new Date(now.getFullYear(), annObj.getMonth(), annObj.getDate(), 0, 0, 0);
+        if (nextCustDate.getTime() <= now.getTime()) {
+          nextCustDate.setFullYear(nextCustDate.getFullYear() + 1);
+        }
+        events.push({ name: ann.name, targetDate: nextCustDate });
+      });
+
+      if (events.length > 0) {
+        events.sort((a, b) => a.targetDate.getTime() - b.targetDate.getTime());
+        const closest = events[0];
+        const diff = closest.targetDate.getTime() - now.getTime();
+
+        const cDays = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+        const cHours = Math.max(0, Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
+        const cMinutes = Math.max(0, Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)));
+        const cSeconds = Math.max(0, Math.floor((diff % (1000 * 60)) / 1000));
+
+        setNextSpecialEvent({
+          name: closest.name,
+          timeLeft: {
+            days: cDays,
+            hours: cHours,
+            minutes: cMinutes,
+            seconds: cSeconds,
+          },
+        });
+      } else {
+        setNextSpecialEvent(null);
+      }
     }
 
     calculateTime();
     const interval = setInterval(calculateTime, 1000);
     return () => clearInterval(interval);
-  }, [config.startDate]);
+  }, [config.startDate, customAnns]);
 
   // Handle active anniversary notifications
   useEffect(() => {
@@ -535,8 +594,80 @@ export default function Dashboard({ config, passwordKey }: DashboardProps) {
           </span>
         </div>
 
+        {/* Countdown Card (Cuenta Regresiva) */}
+        {nextSpecialEvent ? (
+          <div className="md:col-span-1 bg-white rounded-3xl border-2 border-rose-100 shadow-md p-6 flex flex-col justify-between relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50/40 rounded-full filter blur-2xl -z-10 group-hover:scale-110 transition-transform duration-700"></div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-3.5">
+                <span className="bg-rose-100 text-rose-600 p-2.5 rounded-xl">
+                  <Clock className="w-5 h-5 stroke-[2.2]" />
+                </span>
+                <h3 className="text-lg font-serif font-extrabold text-stone-900 tracking-tight">
+                  Próxima Celebración
+                </h3>
+              </div>
+
+              <div className="mb-4">
+                <span className="text-[10px] uppercase font-mono tracking-wider text-rose-500 font-bold block mb-1">
+                  Evento Especial
+                </span>
+                <p className="text-base font-serif font-extrabold text-stone-850 leading-tight">
+                  {nextSpecialEvent.name}
+                </p>
+              </div>
+
+              {/* Ticking Numbers */}
+              <div className="grid grid-cols-4 gap-1.5 text-center bg-rose-50/30 p-3 rounded-2xl border border-rose-100/50">
+                <div>
+                  <span className="block font-serif text-lg md:text-xl font-black text-rose-600 leading-none">
+                    {nextSpecialEvent.timeLeft.days}
+                  </span>
+                  <span className="text-[8px] uppercase font-mono tracking-wider text-stone-500 font-bold block mt-1">
+                    Días
+                  </span>
+                </div>
+                <div>
+                  <span className="block font-serif text-lg md:text-xl font-black text-stone-800 leading-none">
+                    {String(nextSpecialEvent.timeLeft.hours).padStart(2, '0')}
+                  </span>
+                  <span className="text-[8px] uppercase font-mono tracking-wider text-stone-500 font-bold block mt-1">
+                    Horas
+                  </span>
+                </div>
+                <div>
+                  <span className="block font-serif text-lg md:text-xl font-black text-stone-800 leading-none">
+                    {String(nextSpecialEvent.timeLeft.minutes).padStart(2, '0')}
+                  </span>
+                  <span className="text-[8px] uppercase font-mono tracking-wider text-stone-500 font-bold block mt-1">
+                    Min
+                  </span>
+                </div>
+                <div>
+                  <span className="block font-serif text-lg md:text-xl font-black text-stone-800 leading-none">
+                    {String(nextSpecialEvent.timeLeft.seconds).padStart(2, '0')}
+                  </span>
+                  <span className="text-[8px] uppercase font-mono tracking-wider text-stone-500 font-bold block mt-1">
+                    Seg
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <span className="text-[9px] font-mono tracking-widest uppercase text-stone-400 font-bold block mt-4 flex items-center gap-1">
+              <Heart className="w-2.5 h-2.5 fill-rose-500 text-rose-500 animate-pulse inline" /> Cuenta Regresiva Activa
+            </span>
+          </div>
+        ) : (
+          <div className="md:col-span-1 bg-white rounded-3xl border-2 border-rose-100 shadow-md p-6 flex flex-col justify-center items-center text-center">
+            <Heart className="w-10 h-10 text-rose-300 animate-bounce mb-3" />
+            <p className="text-xs text-stone-400 font-serif italic">Registra una fecha especial para comenzar la cuenta regresiva.</p>
+          </div>
+        )}
+
         {/* Custom Anniversaries list */}
-        <div className="md:col-span-2 bg-white rounded-3xl border-2 border-rose-100 shadow-md p-6 flex flex-col justify-between">
+        <div className="md:col-span-1 bg-white rounded-3xl border-2 border-rose-100 shadow-md p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">

@@ -16,6 +16,19 @@ export default function App() {
   const [config, setConfig] = useState<RelationshipConfig | null>(null);
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('rincon_dark_mode') === 'true';
+  });
+
+  // Handle Dark Mode toggle on document element
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('rincon_dark_mode', String(isDarkMode));
+  }, [isDarkMode]);
 
   // Initialize the database on application load
   useEffect(() => {
@@ -61,11 +74,11 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col text-stone-900 selection:bg-rose-100 selection:text-rose-900 font-sans leading-relaxed">
-      
+    <div className="min-h-screen bg-stone-50 flex flex-col text-stone-900 selection:bg-rose-100 selection:text-rose-900 font-sans leading-relaxed transition-colors duration-300">
+
       {/* Decorative background vectors for romance aesthetic */}
-      <div className="fixed top-0 left-0 w-96 h-96 bg-rose-100/10 rounded-full filter blur-3xl pointer-events-none -z-10"></div>
-      <div className="fixed bottom-0 right-0 w-96 h-96 bg-amber-50/20 rounded-full filter blur-3xl pointer-events-none -z-10"></div>
+      <div className="fixed top-0 left-0 w-96 h-96 bg-rose-100/10 rounded-full filter blur-3xl pointer-events-none -z-10 dark:bg-rose-950/5"></div>
+      <div className="fixed bottom-0 right-0 w-96 h-96 bg-amber-50/20 rounded-full filter blur-3xl pointer-events-none -z-10 dark:bg-rose-950/10"></div>
 
       {/* Shared navigation header */}
       <Navbar
@@ -73,6 +86,8 @@ export default function App() {
         setTab={setCurrentTab}
         config={config}
         onLock={handleLock}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
       />
 
       {/* Dynamic tab contents panel */}
