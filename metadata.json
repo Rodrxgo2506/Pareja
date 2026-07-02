@@ -1,0 +1,6 @@
+{
+  "name": "Nuestro Espacio Privado",
+  "description": "Un espacio íntimo, seguro y cifrado de extremo a extremo para compartir fotos, videos, recuerdos, canciones y celebrar aniversarios.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
