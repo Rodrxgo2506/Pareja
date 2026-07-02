@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Calendar, Clock, Bell, Plus, Trash2, Quote, Sparkles } from 'lucide-react';
+import { Heart, Calendar, Clock, Bell, Plus, Trash2, Quote, Sparkles, Share2, Download, Copy, Check, Upload, RefreshCw } from 'lucide-react';
 import { RelationshipConfig, TimelineEvent } from '../types';
-import { getAllFromStore, putToStore, deleteFromStore } from '../lib/db';
-import { encrypt, decrypt } from '../lib/crypto';
+import { getAllFromStore, putToStore, deleteFromStore, clearAllStores } from '../lib/db';
+import { encrypt, decrypt, hashKey } from '../lib/crypto';
 
 interface DashboardProps {
   config: RelationshipConfig;
@@ -46,6 +46,128 @@ export default function Dashboard({ config, passwordKey }: DashboardProps) {
   const [stats, setStats] = useState({ photos: 0, messages: 0, memories: 0 });
   const [activeNotifications, setActiveNotifications] = useState<string[]>([]);
   const [confettiActive, setConfettiActive] = useState(false);
+
+  // Backup & sync states
+  const [copied, setCopied] = useState(false);
+  const [exportJson, setExportJson] = useState<string | null>(null);
+  const [importJsonText, setImportJsonText] = useState('');
+  const [importError, setImportError] = useState('');
+  const [importSuccess, setImportSuccess] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [backupFileLoaded, setBackupFileLoaded] = useState('');
+
+  // Export all data
+  const handleExportData = async () => {
+    setIsExporting(true);
+    try {
+      const stores = ['config', 'albums', 'photos', 'timeline', 'messages', 'songs', 'coupons'];
+      const backup: any = {};
+
+      for (const store of stores) {
+        backup[store] = await getAllFromStore(store);
+      }
+
+      const jsonStr = JSON.stringify(backup, null, 2);
+      setExportJson(jsonStr);
+    } catch (err) {
+      console.error('Error exporting backup:', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadBackup = () => {
+    if (!exportJson) return;
+    const blob = new Blob([exportJson], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rincon_secreto_respaldo.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyCode = () => {
+    if (!exportJson) return;
+    navigator.clipboard.writeText(exportJson);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleImportFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setBackupFileLoaded(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setImportJsonText(text);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportData = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importJsonText.trim()) return;
+
+    setImportError('');
+    setImportSuccess('');
+    setIsImporting(true);
+
+    try {
+      const parsed = JSON.parse(importJsonText.trim());
+
+      const backupConfigList = parsed.config;
+      if (!backupConfigList || !Array.isArray(backupConfigList)) {
+        throw new Error('El archivo no contiene un formato de configuración válido.');
+      }
+
+      const backupConfig = backupConfigList.find((c: any) => c.id === 'main_config');
+      if (!backupConfig) {
+        throw new Error('No se encontró la configuración principal en el respaldo.');
+      }
+
+      // Check key hash
+      const currentHash = hashKey(passwordKey);
+      if (backupConfig.loveKeyHash !== currentHash) {
+        throw new Error('La Clave de Amor de este respaldo es diferente de tu clave actual. Para sincronizarse, ambos deben configurar exactamente la misma Clave de Amor.');
+      }
+
+      // Safe confirmation before overwriting
+      if (!window.confirm('¿Quieres importar este respaldo? Esto reemplazará los datos actuales de este navegador por el contenido importado.')) {
+        setIsImporting(false);
+        return;
+      }
+
+      // Clear all
+      await clearAllStores();
+
+      // Write stores
+      const stores = ['config', 'albums', 'photos', 'timeline', 'messages', 'songs', 'coupons'];
+      for (const store of stores) {
+        const list = parsed[store];
+        if (list && Array.isArray(list)) {
+          for (const item of list) {
+            await putToStore(store, item);
+          }
+        }
+      }
+
+      setImportSuccess('¡Sincronización exitosa! Los recuerdos de tu pareja han sido importados. El rincón se recargará ahora.');
+      setTimeout(() => {
+        window.location.reload();
+      }, 2500);
+
+    } catch (err: any) {
+      setImportError(err.message || 'Error al procesar el archivo. Formato JSON inválido.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   // Pick a random quote on load
   useEffect(() => {
@@ -97,7 +219,7 @@ export default function Dashboard({ config, passwordKey }: DashboardProps) {
       if (diffMs < 0) diffMs = 0;
 
       const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      
+
       // Detailed breakdown
       let tempYear = start.getFullYear();
       let tempMonth = start.getMonth();
@@ -240,9 +362,9 @@ export default function Dashboard({ config, passwordKey }: DashboardProps) {
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-8 py-6 space-y-8 pb-24 md:pb-12">
-      
+
       {/* Dynamic Romantic Slogan Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="text-center md:text-left flex flex-col md:flex-row md:items-end justify-between border-b border-rose-100 pb-5 gap-4"
@@ -268,7 +390,7 @@ export default function Dashboard({ config, passwordKey }: DashboardProps) {
             <Sparkles className="w-5 h-5 text-white fill-white animate-bounce" />
             <span className="text-sm font-serif font-bold">¡Día de Celebración Activo! Disfrutad de vuestro amor hoy al máximo. ♥</span>
           </div>
-          <button 
+          <button
             onClick={() => setConfettiActive(false)}
             className="text-xs font-mono uppercase tracking-wider font-bold bg-white text-rose-600 px-3 py-1 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
           >
@@ -279,11 +401,11 @@ export default function Dashboard({ config, passwordKey }: DashboardProps) {
 
       {/* Bento Grid Header */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+
         {/* Main Ticker Card */}
         <div className="md:col-span-2 bg-white rounded-3xl border-2 border-rose-500 shadow-xl p-6 flex flex-col justify-between relative overflow-hidden group outline outline-offset-4 outline-rose-100">
           <div className="absolute top-0 right-0 w-48 h-48 bg-rose-50 rounded-full filter blur-3xl -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-          
+
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -395,15 +517,15 @@ export default function Dashboard({ config, passwordKey }: DashboardProps) {
 
       {/* Custom Milestones and Romantic Quote row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+
         {/* Quote Card - Now striking Romantic Red and White! */}
         <div className="md:col-span-1 bg-gradient-to-br from-rose-600 to-rose-800 rounded-3xl border-2 border-rose-500 shadow-xl p-6 flex flex-col justify-between min-h-[220px] relative overflow-hidden group">
           <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-rose-500/30 rounded-full filter blur-2xl -z-10"></div>
-          
+
           <div className="bg-white/15 p-2.5 w-max rounded-xl border border-white/20 shadow-sm">
             <Quote className="w-4 h-4 text-white fill-white" />
           </div>
-          
+
           <p className="font-serif italic text-white text-base font-medium leading-relaxed my-4 text-glow-rose">
             "{quote}"
           </p>
@@ -537,6 +659,142 @@ export default function Dashboard({ config, passwordKey }: DashboardProps) {
         <div className="bg-white p-5 rounded-2xl border-2 border-rose-100 text-center shadow-sm hover:border-rose-300 transition-colors">
           <span className="block font-serif text-3xl font-black text-rose-600">{stats.messages}</span>
           <span className="text-[10px] font-mono uppercase tracking-widest text-stone-500 font-bold mt-1.5 block">Cartas de Amor</span>
+        </div>
+      </div>
+
+      {/* Sincronización y Respaldo Card */}
+      <div className="bg-white rounded-3xl border-2 border-rose-200 shadow-md p-6 mt-2 relative overflow-hidden" id="sync-section">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50/30 rounded-full filter blur-2xl -z-10"></div>
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-rose-100 pb-4 mb-4">
+          <div className="flex items-center gap-2.5">
+            <span className="bg-rose-50 text-rose-600 p-2.5 rounded-xl border border-rose-100">
+              <Share2 className="w-5 h-5 stroke-[2.2]" />
+            </span>
+            <div>
+              <h3 className="text-lg font-serif font-extrabold text-stone-900 tracking-tight leading-snug">
+                Sincronización con tu Pareja
+              </h3>
+              <p className="text-[10px] text-stone-500 font-medium">
+                Sincronizad vuestro rincón privado exportando e importando vuestros recuerdos.
+              </p>
+            </div>
+          </div>
+
+          <span className="text-[10px] uppercase font-mono tracking-widest text-stone-400 font-bold self-start md:self-center">
+            Paso de Sincronización
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* Export section */}
+          <div className="bg-rose-50/20 border border-rose-100/70 p-5 rounded-2xl flex flex-col justify-between">
+            <div>
+              <h4 className="text-xs font-serif font-extrabold text-rose-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Download className="w-4 h-4" /> 1. Exportar Mis Datos (Para tu Pareja)
+              </h4>
+              <p className="text-[11px] text-stone-500 leading-relaxed mb-4">
+                Genera el archivo de sincronización con todos los álbumes, cartas, canciones e hitos que has creado. Envíale este archivo o código a tu pareja para que se sincronice contigo.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {!exportJson ? (
+                <button
+                  onClick={handleExportData}
+                  disabled={isExporting}
+                  className="w-full bg-rose-600 hover:bg-rose-700 disabled:opacity-55 text-white py-2 px-4 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isExporting ? 'animate-spin' : ''}`} />
+                  {isExporting ? 'Generando...' : 'Generar Código de Sincronización'}
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="p-2.5 bg-stone-900 text-[10px] font-mono text-emerald-400 rounded-xl max-h-[80px] overflow-y-auto border border-stone-800 break-all leading-normal select-all">
+                    {exportJson}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCopyCode}
+                      className="flex-1 bg-stone-900 text-white hover:bg-stone-850 text-xs font-bold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied ? '¡Copiado!' : 'Copiar Código'}
+                    </button>
+                    <button
+                      onClick={handleDownloadBackup}
+                      className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Descargar .json
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setExportJson(null)}
+                    className="w-full text-center text-[10px] text-stone-400 hover:text-stone-600 underline font-medium cursor-pointer"
+                  >
+                    Ocultar Código
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Import section */}
+          <div className="bg-stone-50 border border-stone-200/80 p-5 rounded-2xl">
+            <h4 className="text-xs font-serif font-extrabold text-stone-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Upload className="w-4 h-4 text-rose-500" /> 2. Importar Datos de mi Pareja
+            </h4>
+            <p className="text-[11px] text-stone-500 leading-relaxed mb-4">
+              Pega el código de sincronización o sube el archivo <code>.json</code> que te envió tu pareja. <span className="font-bold text-rose-600">¡Atención!</span> Esto reemplazará los datos actuales para tener los mismos recuerdos compartidos.
+            </p>
+
+            <form onSubmit={handleImportData} className="space-y-3">
+              <div className="grid grid-cols-1 gap-2">
+                <label className="flex items-center justify-between border-2 border-dashed border-stone-200 hover:border-rose-300 bg-white rounded-xl px-3 py-2 cursor-pointer transition-colors text-xs text-stone-500 font-medium">
+                  <span className="truncate max-w-[180px]">{backupFileLoaded || "Seleccionar archivo .json"}</span>
+                  <Upload className="w-3.5 h-3.5 text-stone-400" />
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportFileUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                <textarea
+                  placeholder="O pega aquí el código largo que copió tu pareja..."
+                  value={importJsonText}
+                  onChange={(e) => setImportJsonText(e.target.value)}
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl border border-stone-200 text-[10px] font-mono text-stone-800 focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white"
+                />
+              </div>
+
+              {importError && (
+                <p className="text-[10px] text-rose-600 bg-rose-50/80 p-2 rounded-lg border border-rose-100 font-semibold leading-normal">
+                  ⚠️ {importError}
+                </p>
+              )}
+
+              {importSuccess && (
+                <p className="text-[10px] text-emerald-600 bg-emerald-50/80 p-2 rounded-lg border border-emerald-100 font-semibold leading-normal animate-pulse">
+                  ✅ {importSuccess}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isImporting || !importJsonText.trim()}
+                className="w-full bg-stone-900 hover:bg-stone-850 disabled:opacity-40 text-white py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isImporting ? 'animate-spin' : ''}`} />
+                Sincronizar e Importar
+              </button>
+            </form>
+          </div>
+
         </div>
       </div>
 
